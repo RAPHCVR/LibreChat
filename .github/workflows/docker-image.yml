@@ -41,5 +41,5 @@ jobs:
           push: true
           # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
           tags: |
-            ghcr.io/${{ github.repository_owner }}/librechat:${{ env.TIMESTAMP }}
-            ghcr.io/${{ github.repository_owner }}/librechat:latest
+            ghcr.io/${{ toLower(github.repository_owner) }}/librechat:${{ env.TIMESTAMP }}
+            ghcr.io/${{ toLower(github.repository_owner) }}/librechat:latest
