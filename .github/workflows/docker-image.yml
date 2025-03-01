@@ -1,0 +1,45 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+    
+      # 2. Create a timestamp tag that will be used as a unique version.
+      - name: Set timestamp tag
+        id: get_timestamp
+        run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+    
+      # 3. Log in to GitHub Container Registry using the built-in GITHUB_TOKEN.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+    
+      # 4. Build and push the Docker image with two tags:
+      #    a. A timestamp tag (unique) and
+      #    b. "latest" for the latest successful build.
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/LibreChat:${{ env.TIMESTAMP }}
+            ghcr.io/${{ github.repository_owner }}/LibreChat:latest
