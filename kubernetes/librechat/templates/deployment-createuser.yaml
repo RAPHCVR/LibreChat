@@ -1,0 +1,43 @@
+{{- if .Values.createuser.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "librechat.createuser.fullname" . | trunc 63 | trimSuffix "-" }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: createuser
+    helm.sh/chart: {{ include "librechat.chart" . }}
+spec:
+  replicas: {{ .Values.createuser.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: createuser
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: createuser
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.createuser.backend.image.registry }}/{{ .Values.createuser.backend.image.repository }}:{{ .Values.createuser.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.createuser.backend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.createuser.port }}
+              name: backend
+          env:
+            - name: PORT
+              value: "{{ .Values.createuser.port }}"
+            - name: MONGO_URI
+              value: "mongodb://{{ include "mongodb.service.nameOverride" .Subcharts.mongodb }}.{{ .Release.Namespace | lower }}.svc.cluster.local:27017/LibreChat"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "librechat.createuser.fullname" . }}-jwt-secret
+                  key: JWT_SECRET
+        - name: frontend
+          image: "{{ .Values.createuser.frontend.image.registry }}/{{ .Values.createuser.frontend.image.repository }}:{{ .Values.createuser.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.createuser.frontend.image.pullPolicy }}
+          ports:
+            - containerPort: 4173
+              name: frontend
+{{- end }}

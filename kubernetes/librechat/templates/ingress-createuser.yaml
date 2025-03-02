@@ -1,0 +1,30 @@
+{{- if .Values.createuser.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "librechat.createuser.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  annotations:
+    # The annotation below tells AKS app routing add-on where to find the TLS cert in Key Vault
+    kubernetes.azure.com/tls-cert-keyvault-uri: {{ .Values.createuser.ingress.keyVaultCertUri | quote }}
+    # Example of increasing the max body size if needed:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - {{ .Values.createuser.ingress.host }}
+        # Must follow the naming convention keyvault-<ingress name>
+      secretName: keyvault-{{ include "librechat.createuser.fullname" . }}
+  rules:
+    - host: {{ .Values.createuser.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "librechat.createuser.fullname" . }}
+                port:
+                  number: 4173
+{{- end }}

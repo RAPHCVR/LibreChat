@@ -1,0 +1,15 @@
+{{- if .Values.dofile.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "librechat.fullname" . }}-dofile
+  labels:
+    {{- include "librechat.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.dofile.accessMode }}
+  storageClassName: {{ .Values.dofile.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.dofile.storageSize }}
+{{- end }}

@@ -1,0 +1,13 @@
+{{- if .Values.librechat.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "librechat.fullname" . }}-pdb
+  labels:
+    {{ include "librechat.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.librechat.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "librechat.selectorLabels" . | nindent 6 }}
+{{- end }}

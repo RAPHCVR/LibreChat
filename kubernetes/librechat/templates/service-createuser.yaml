@@ -1,0 +1,15 @@
+{{- if .Values.createuser.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "librechat.createuser.fullname" . | trunc 63 | trimSuffix "-" }}
+  namespace: {{ .Values.namespace }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: createuser
+  ports:
+    - name: http
+      port: 4173
+      targetPort: frontend
+  {{- end }}

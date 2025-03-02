@@ -1,0 +1,213 @@
+# Default values for librechat.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+namespace: "librechat"
+global:
+  librechat:
+    existingSecretName: "librechat-credentials-env"
+    envConfigMapName: "librechat-public-env"
+    # Used for Setting the Right Key, can be something like AZURE_API_KEY, if Azure OpenAI is used
+
+librechat:
+# LibreChat allows Configuration in 2 Ways: Environment Variables and a Config file. For easier Deployment the needed values are predifined here but should be adjusted to your needs.
+  existingSecretName: "librechat-credentials-env"
+  
+  publicConfigEnv:
+    enabled: true
+    configMapName: "librechat-public-env"
+  
+# # name of existing Yaml configmap, key must be librechat.yaml
+  existingConfigYaml: "librechat-config"
+
+  pdb:
+    enabled: true
+    minAvailable: 1  # Ensure at least 1 pod is always available
+
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilization: 90  # Target CPU utilization percentage
+
+  # Volume used to store image Files uploaded to the Web UI
+  imageVolume:
+    enabled: false
+    size: 10G
+    accessModes: ReadWriteOnce
+    # storageClassName:
+
+
+dofile:
+  enabled: true
+  storageClass: do-block-storage
+  storageSize: 10Gi
+  accessMode: ReadWriteMany
+  mountPath: "/app/client/public/images"
+
+# only lite RAG is supported
+librechat-rag-api:
+  enabled: true
+
+image:
+  repository: LibreChat
+  registry: raphcvr-librechat.ghcr.io
+  tag: main
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+
+lifecycle: {}
+# # base for adding a custom banner // see https://github.com/danny-avila/LibreChat/pull/3952 for an example
+#   postStart:
+#     exec:
+#       command: ["/bin/sh", "-c", "npm run update-banner <displayFrom(Format: yyyy-mm-ddTHH:MM:SSZ)> <displayTo(Format: yyyy-mm-ddTHH:MM:SSZ)> <message> <isPublic(true/false)>"]
+
+
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  # readOnlyRootFilesystem: true # not supported yet
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 3080
+  annotations: {}
+
+ingress:
+  enabled: true
+  ingressClassName: "nginx"
+  host: "chat.raphcvr.me"
+  annotations:
+    # Let cert-manager handle TLS via Cloudflare DNS challenge
+    cert-manager.io/issuer: "dns-cloudflare"
+    # NGINX-specific annotations to avoid file upload issues and long timeouts
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+  tls:
+    enabled: true
+    secretName: "chat-raphcvr-me-tls"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "200m"
+    memory: "512Mi"
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# livenessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+# readinessProbe:
+#   httpGet:
+#     path: /
+#     port: http
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# MongoDB Parameters
+mongodb:
+  enabled: true
+  auth:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1
+      memory: 4Gi
+  persistence:
+    resourcePolicy: "keep"
+  databases:
+   - LibreChat
+#  persistence:
+#    size: 8Gi
+
+
+meilisearch:
+  enabled: true
+  persistence:
+    enabled: true
+    storageClass: ""
+  image: 
+    tag: "v1.7.3"
+  auth:
+    # Use an existing Kubernetes secret for the MEILI_MASTER_KEY
+    existingMasterKeySecret: "librechat-credentials-env"
+
+
+redis:
+  enabled: true
+  auth:
+    password: "password"
+  replica:
+    disableCommands: [ ]
+  master:
+    disableCommands: [ ]
+
+createuser:
+  enabled: false            # Set true to deploy the createuser microservice
+  replicaCount: 1           # Number of pod replicas
+  port: 5000                # The port used by the backend (also passed as env variable)
+  ingress:
+    enabled: false
+    host: panel.wonka.chat
+    keyVaultCertUri: "https://kv-certificate-lfzm.vault.azure.net/certificates/panel-wonka-chat"
+
+  backend:
+    image:
+      repository: wonkachat_createuser_ui_backend
+      registry: wonkacluster.azurecr.io
+      tag: "master"
+      pullPolicy: Always
+
+  frontend:
+    image:
+      repository: wonkachat_createuser_ui_frontend
+      registry: wonkacluster.azurecr.io
+      tag: "master"
+      pullPolicy: Always

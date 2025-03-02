@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: dns-cloudflare
+  namespace: librechat
+spec:
+  acme:
+    email: jackjack26350@gmail.com
+    privateKeySecretRef:
+      name: dns-cloudflare
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              key: api-token
+              name: cloudflare-api-token-secret
