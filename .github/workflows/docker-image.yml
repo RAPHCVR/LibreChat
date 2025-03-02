@@ -29,6 +29,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. Lowercase the image repository name to avoid uppercase (using the same treatment example).
+      - name: Lowercase image repository name
+        run: |
+          IMAGE_REPO="ghcr.io/${{ github.repository_owner }}/librechat"
+          IMAGE_REPO=$(echo $IMAGE_REPO | tr '[A-Z]' '[a-z]')
+          echo "IMAGE_REPO=$IMAGE_REPO" >> $GITHUB_ENV
     
       # 4. Build and push the Docker image with two tags:
       #    a. A timestamp tag (unique) and
@@ -41,5 +48,5 @@ jobs:
           push: true
           # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
           tags: |
-            ghcr.io/${{ github.repository_owner }}/librechat:${{ env.TIMESTAMP }}
-            ghcr.io/${{ github.repository_owner }}/librechat:latest
+            ${{ env.IMAGE_REPO }}:${{ env.TIMESTAMP }}
+            ${{ env.IMAGE_REPO }}:latest
