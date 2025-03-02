@@ -41,5 +41,5 @@ jobs:
           push: true
           # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
           tags: |
-            ghcr.io/raphcvr/librechat:${{ env.TIMESTAMP }}
-            ghcr.io/raphcvr/librechat:latest
+            ghcr.io/RAPHCVR/librechat:${{ env.TIMESTAMP }}
+            ghcr.io/RAPHCVR/librechat:latest
