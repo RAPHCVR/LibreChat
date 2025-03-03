@@ -107,3 +107,5 @@ uploads/
 # owner
 release/
 !/client/src/@types/i18next.d.ts
+/kubernetes/librechat/Chart.lock
+/kubernetes/librechat-rag-api/Chart.lock

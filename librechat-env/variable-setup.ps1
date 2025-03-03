@@ -14,7 +14,7 @@
 #>
 
 # Variables
-$namespace = "wonkachat" # Change this to your target namespace if different
+$namespace = "librechat" # Change this to your target namespace if different
 
 # Define Secrets with their corresponding source files
 $secrets = @(

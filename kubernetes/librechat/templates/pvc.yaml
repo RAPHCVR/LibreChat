@@ -6,9 +6,9 @@ metadata:
   labels:
     {{- include "librechat.labels" . | nindent 4 }}
 spec:
+  storageClassName: nfs-rwx-storage
   accessModes:
     - {{ .Values.dofile.accessMode }}
-  storageClassName: {{ .Values.dofile.storageClass }}
   resources:
     requests:
       storage: {{ .Values.dofile.storageSize }}

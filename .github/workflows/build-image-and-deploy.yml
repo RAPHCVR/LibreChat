@@ -1,0 +1,91 @@
+name: Docker Image CI/CD with Kubernetes Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      # 1. Check out the repository.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Create a timestamp tag used as a unique version identifier.
+      - name: Set timestamp tag
+        id: get_timestamp
+        run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+
+      # 3. Log in to GitHub Container Registry using the built‑in GITHUB_TOKEN.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. Lowercase the image repository name to avoid issues with uppercase letters.
+      - name: Lowercase image repository name
+        run: |
+          IMAGE_REPO="ghcr.io/${{ github.repository_owner }}/librechat"
+          IMAGE_REPO=$(echo $IMAGE_REPO | tr '[A-Z]' '[a-z]')
+          echo "IMAGE_REPO=$IMAGE_REPO" >> $GITHUB_ENV
+
+      # 5. Build and push the Docker image with two tags:
+      #    a. A unique timestamp tag and
+      #    b. "latest" for the tip-of-tree build.
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
+          tags: |
+            ${{ env.IMAGE_REPO }}:${{ env.TIMESTAMP }}
+            ${{ env.IMAGE_REPO }}:latest
+
+      # 6. Install doctl to interact with DigitalOcean.
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # 7. Set up the Kubernetes kubeconfig for your DOKS cluster – this gets you short‑lived credentials.
+      - name: Set up Kubernetes kubeconfig
+        run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }} --expiry-seconds 600
+
+      # 8. Add the required Helm repositories.
+      - name: Add Helm repositories
+        run: |
+          helm repo add meilisearch https://meilisearch.github.io/meilisearch-kubernetes
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      # 9. Update dependencies for the dependent Helm chart located in "kubernetes/librechat-rag-api".
+      - name: Update Helm dependencies (librechat-rag-api)
+        working-directory: kubernetes/librechat-rag-api
+        run: helm dependency update
+
+      # 10. Update dependencies for the main Helm chart in "kubernetes/librechat".
+      - name: Update Helm dependencies (librechat)
+        working-directory: kubernetes/librechat
+        run: helm dependency update
+
+      # 11. Deploy (or upgrade) your release using Helm.
+      #     The image repository and tag are set so your deployment uses the newly built image.
+      - name: Deploy using Helm
+        run: |
+          echo "Deploying Helm release 'librechat' into namespace 'librechat' using image tag ${{ env.TIMESTAMP }}"
+          helm upgrade --install librechat kubernetes/librechat \
+            --namespace librechat \
+            --set image.repository=${{ env.IMAGE_REPO }} \
+            --set image.tag=${{ env.TIMESTAMP }}

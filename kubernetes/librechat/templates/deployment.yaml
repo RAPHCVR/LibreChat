@@ -33,6 +33,15 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       # Add Init Container Here
       initContainers:
+        - name: fix-lostfound-permissions
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - "rm -rf /app/client/public/images/lost+found || true"
+          volumeMounts:
+            - name: dofile
+              mountPath: "{{ .Values.dofile.mountPath }}"
         - name: wait-for-rag-api
           image: busybox
           command:

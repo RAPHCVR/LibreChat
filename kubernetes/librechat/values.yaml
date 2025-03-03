@@ -39,7 +39,6 @@ librechat:
 
 dofile:
   enabled: true
-  storageClass: do-block-storage
   storageSize: 10Gi
   accessMode: ReadWriteMany
   mountPath: "/app/client/public/images"
@@ -49,9 +48,9 @@ librechat-rag-api:
   enabled: true
 
 image:
-  repository: LibreChat
-  registry: raphcvr-librechat.ghcr.io
-  tag: main
+  repository: librechat
+  registry: ghcr.io/raphcvr
+  tag: latest
   pullPolicy: Always
 
 imagePullSecrets: []
@@ -186,6 +185,7 @@ redis:
     password: "password"
   replica:
     disableCommands: [ ]
+    replicaCount: 2
   master:
     disableCommands: [ ]
 
