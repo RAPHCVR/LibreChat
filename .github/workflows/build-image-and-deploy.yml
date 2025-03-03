@@ -35,13 +35,12 @@ jobs:
       - name: Set image registry and repository
         run: |
           IMAGE_REGISTRY="ghcr.io/${{ github.repository_owner }}"
-          IMAGE_REGISTRY=$(echo IMAGE_REGISTRY | tr '[A-Z]' '[a-z]')
-          echo "IMAGE_REGISTRY=IMAGE_REGISTRY" >> $GITHUB_ENV
+          # Convert to lowercase just in case the repository owner has any uppercase letters
+          IMAGE_REGISTRY=$(echo "$IMAGE_REGISTRY" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY}" >> $GITHUB_ENV
           echo "IMAGE_REPOSITORY=librechat" >> $GITHUB_ENV
 
-      # 5. Build and push the Docker image with two tags:
-      #    a. A unique timestamp tag and
-      #    b. "latest" (tip-of-tree).
+      # 5. Build and push the Docker image with two tags: a unique timestamp tag and "latest".
       - name: Build and Push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -79,8 +78,7 @@ jobs:
         working-directory: kubernetes/librechat
         run: helm dependency update
 
-      # 11. Deploy (or upgrade) the Helm release.
-      #     Pass separate overrides for registry, repository, and tag.
+      # 11. Deploy (or upgrade) the Helm release with separate overrides for registry, repository, and tag.
       - name: Deploy using Helm
         run: |
           echo "Deploying Helm release 'librechat' into namespace 'librechat' using image tag ${{ env.TIMESTAMP }}"
@@ -90,5 +88,5 @@ jobs:
             --set image.registry=${{ env.IMAGE_REGISTRY }} \
             --set image.repository=${{ env.IMAGE_REPOSITORY }} \
             --set image.tag=${{ env.TIMESTAMP }} \
-            --set image.pullPolicy=Always
+            --set image.pullPolicy=Always \
             --timeout 15m
