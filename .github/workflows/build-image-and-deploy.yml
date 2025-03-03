@@ -34,7 +34,7 @@ jobs:
       # 4. Set separate image registry and repository values.
       - name: Set image registry and repository
         run: |
-          IMAGE_REGISTRY=ghcr.io/${{ github.repository_owner }}
+          IMAGE_REGISTRY="ghcr.io/${{ github.repository_owner }}"
           IMAGE_REGISTRY=$(echo IMAGE_REGISTRY | tr '[A-Z]' '[a-z]')
           echo "IMAGE_REGISTRY=IMAGE_REGISTRY" >> $GITHUB_ENV
           echo "IMAGE_REPOSITORY=librechat" >> $GITHUB_ENV
