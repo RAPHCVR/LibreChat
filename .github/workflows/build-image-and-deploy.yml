@@ -7,9 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     permissions:
       packages: write
       contents: read
@@ -19,12 +18,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Create a timestamp tag used as a unique version identifier.
+      # 2. Create a timestamp tag for a unique image version.
       - name: Set timestamp tag
         id: get_timestamp
         run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
-      # 3. Log in to GitHub Container Registry using the built‑in GITHUB_TOKEN.
+      # 3. Log in to GitHub Container Registry.
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -32,34 +31,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 4. Lowercase the image repository name to avoid issues with uppercase letters.
-      - name: Lowercase image repository name
+      # 4. Set separate image registry and repository values.
+      - name: Set image registry and repository
         run: |
-          IMAGE_REPO="ghcr.io/${{ github.repository_owner }}/librechat"
-          IMAGE_REPO=$(echo $IMAGE_REPO | tr '[A-Z]' '[a-z]')
-          echo "IMAGE_REPO=$IMAGE_REPO" >> $GITHUB_ENV
+          IMAGE_REGISTRY=ghcr.io/${{ github.repository_owner }}
+          IMAGE_REGISTRY=$(echo IMAGE_REGISTRY | tr '[A-Z]' '[a-z]')
+          echo "IMAGE_REGISTRY=IMAGE_REGISTRY" >> $GITHUB_ENV
+          echo "IMAGE_REPOSITORY=librechat" >> $GITHUB_ENV
 
       # 5. Build and push the Docker image with two tags:
       #    a. A unique timestamp tag and
-      #    b. "latest" for the tip-of-tree build.
+      #    b. "latest" (tip-of-tree).
       - name: Build and Push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
-          # Note: For GHCR, your image name should be prefixed by "ghcr.io/<OWNER>/"
           tags: |
-            ${{ env.IMAGE_REPO }}:${{ env.TIMESTAMP }}
-            ${{ env.IMAGE_REPO }}:latest
+            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ env.TIMESTAMP }}
+            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:latest
 
-      # 6. Install doctl to interact with DigitalOcean.
+      # 6. Install doctl (DigitalOcean CLI) to interact with your cluster.
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
-      # 7. Set up the Kubernetes kubeconfig for your DOKS cluster – this gets you short‑lived credentials.
+      # 7. Set up the Kubernetes kubeconfig for your DOKS cluster.
       - name: Set up Kubernetes kubeconfig
         run: doctl kubernetes cluster kubeconfig save ${{ secrets.CLUSTER_NAME }} --expiry-seconds 600
 
@@ -70,22 +69,26 @@ jobs:
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
 
-      # 9. Update dependencies for the dependent Helm chart located in "kubernetes/librechat-rag-api".
-      - name: Update Helm dependencies (librechat-rag-api)
+      # 9. Update dependencies for the dependent chart (librechat-rag-api).
+      - name: Update Helm dependencies for librechat-rag-api
         working-directory: kubernetes/librechat-rag-api
         run: helm dependency update
 
-      # 10. Update dependencies for the main Helm chart in "kubernetes/librechat".
-      - name: Update Helm dependencies (librechat)
+      # 10. Update dependencies for the main Helm chart (librechat).
+      - name: Update Helm dependencies for librechat
         working-directory: kubernetes/librechat
         run: helm dependency update
 
-      # 11. Deploy (or upgrade) your release using Helm.
-      #     The image repository and tag are set so your deployment uses the newly built image.
+      # 11. Deploy (or upgrade) the Helm release.
+      #     Pass separate overrides for registry, repository, and tag.
       - name: Deploy using Helm
         run: |
           echo "Deploying Helm release 'librechat' into namespace 'librechat' using image tag ${{ env.TIMESTAMP }}"
-          helm upgrade --install librechat kubernetes/librechat \
+          helm upgrade librechat kubernetes/librechat \
             --namespace librechat \
-            --set image.repository=${{ env.IMAGE_REPO }} \
-            --set image.tag=${{ env.TIMESTAMP }}
+            --values kubernetes/librechat/values.yaml \
+            --set image.registry=${{ env.IMAGE_REGISTRY }} \
+            --set image.repository=${{ env.IMAGE_REPOSITORY }} \
+            --set image.tag=${{ env.TIMESTAMP }} \
+            --set image.pullPolicy=Always
+            --timeout 15m
