@@ -18,5 +18,4 @@ data:
   {{- if .Values.redis.enabled }}
   REDIS_URI: redis://:{{ .Values.redis.auth.password }}@{{ include "librechat.redis.masterServiceName" . }}.{{ .Release.Namespace | lower }}.svc.cluster.local:6379
   USE_REDIS: "true"
-  USE_REDIS_CLUSTER: "true"
   {{- end }}
