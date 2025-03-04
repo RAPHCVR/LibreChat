@@ -50,7 +50,7 @@ librechat-rag-api:
 image:
   repository: librechat
   registry: ghcr.io/raphcvr
-  tag: latest
+  tag: "latest"
   pullPolicy: Always
 
 imagePullSecrets: []

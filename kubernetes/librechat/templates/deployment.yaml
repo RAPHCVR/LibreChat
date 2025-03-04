@@ -34,7 +34,7 @@ spec:
       # Add Init Container Here
       initContainers:
         - name: fix-lostfound-permissions
-          image: busybox:1.35
+          image: busybox
           command:
             - sh
             - -c
@@ -54,6 +54,18 @@ spec:
                 sleep 2
               done
               echo "RAG API is up - executing command"
+        - name: fix-image-dir-permissions
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              mkdir -p {{ .Values.dofile.mountPath }} && \
+              chown -R 1000:2000 {{ .Values.dofile.mountPath }} && \
+              chmod -R 770 {{ .Values.dofile.mountPath }}
+          volumeMounts:
+            - name: dofile
+              mountPath: "{{ .Values.dofile.mountPath }}"
       containers:
         - name: {{ include "librechat.fullname" $ }}
           securityContext:
